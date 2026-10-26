@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>HaphazardTasks</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/rings.js" defer></script>
+<script src="/static/dashboard.js" defer></script>
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+
+<main id="screen-loading" class="center">
+  <p class="muted">Opening…</p>
+</main>
+
+<main id="screen-setup" class="center" hidden>
+  <form id="setup-1" class="panel" autocomplete="off" novalidate>
+    <p class="eyebrow">HaphazardTasks · first run</p>
+    <h1>Create your vault</h1>
+    <p>Your tasks are encrypted with a key made from this passphrase. It never leaves this computer, and nobody can reset it for you.</p>
+    <label for="setup-pass">Passphrase</label>
+    <input id="setup-pass" type="password" autocomplete="new-password">
+    <p class="hint" id="setup-hint">At least 12 characters. Four or five unrelated words work well.</p>
+    <label for="setup-pass2">Type it again</label>
+    <input id="setup-pass2" type="password" autocomplete="new-password">
+    <p class="err" id="setup-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit" id="setup-1-btn">Continue</button>
+  </form>
+
+  <form id="setup-2" class="panel" autocomplete="off" novalidate hidden>
+    <p class="eyebrow">HaphazardTasks · first run</p>
+    <h1>Save your recovery key</h1>
+    <p>If you forget your passphrase, this key is the only way back in. Write it down or print it, and keep it away from this computer.</p>
+    <div class="rkey" id="rkey" aria-label="Recovery key"></div>
+    <button type="button" class="btn" id="rkey-print">Print</button>
+    <label for="rkey-check">To confirm you saved it, type the last two groups</label>
+    <input id="rkey-check" placeholder="XXXX-XXXX" spellcheck="false" autocapitalize="characters">
+    <p class="err" id="setup2-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit" id="setup-2-btn">Create vault</button>
+    <button type="button" class="linkbtn" id="setup-back">Back</button>
+  </form>
+</main>
+
+<main id="screen-unlock" class="center" hidden>
+  <form id="unlock-form" class="panel" autocomplete="off" novalidate>
+    <p class="eyebrow">HaphazardTasks</p>
+    <h1>Vault locked</h1>
+    <p class="muted" id="unlock-reason">Enter your passphrase to decrypt your tasks.</p>
+    <div id="unlock-pass-row" class="field">
+      <label for="unlock-pass">Passphrase</label>
+      <input id="unlock-pass" type="password" autocomplete="current-password">
+    </div>
+    <div id="unlock-rec-row" class="field" hidden>
+      <label for="unlock-rec">Recovery key</label>
+      <input id="unlock-rec" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocapitalize="characters">
+    </div>
+    <p class="err" id="unlock-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit" id="unlock-btn">Unlock</button>
+    <button type="button" class="linkbtn" id="unlock-toggle">Use recovery key instead</button>
+    <p class="fine">Argon2id key · AES-256-GCM at rest · 127.0.0.1 only</p>
+  </form>
+</main>
+
+<main id="screen-newpass" class="center" hidden>
+  <form id="newpass-form" class="panel" autocomplete="off" novalidate>
+    <p class="eyebrow">HaphazardTasks</p>
+    <h1>Set a new passphrase</h1>
+    <p>You unlocked with your recovery key. Choose a new passphrase to continue. Your recovery key stays the same.</p>
+    <label for="newpass-1">New passphrase</label>
+    <input id="newpass-1" type="password" autocomplete="new-password">
+    <label for="newpass-2">Type it again</label>
+    <input id="newpass-2" type="password" autocomplete="new-password">
+    <p class="err" id="newpass-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit">Save passphrase</button>
+  </form>
+</main>
+
+<svg width="0" height="0" class="defs" aria-hidden="true">
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)">
+      <rect width="5" height="5" class="hatch-bg"/><rect width="2.2" height="5" class="hatch-fg"/>
+    </pattern>
+    <pattern id="hatch-late" patternUnits="userSpaceOnUse" width="4" height="4" patternTransform="rotate(-45)">
+      <rect width="4" height="4" class="hatch-late-bg"/><rect width="2" height="4" class="hatch-late-fg"/>
+    </pattern>
+  </defs>
+</svg>
+
+<div id="screen-app" hidden>
+  <header class="top">
+    <div class="brand"><h1>HaphazardTasks</h1><span class="host">127.0.0.1:8796</span></div>
+    <span class="spacer"></span>
+    <span class="vault" id="vault-pill"><span class="dot"></span>Vault unlocked · auto-locks in <b id="idle">–:––</b></span>
+    <button type="button" class="btn" id="settings-btn">Settings</button>
+    <button type="button" class="btn" id="lock-btn" title="Lock now (L)">Lock now</button>
+    <button type="button" class="btn" id="templates-btn">Templates</button>
+    <button type="button" class="btn primary" id="new-btn" aria-haspopup="menu" title="New task (N for a blank task)">New task ▾</button>
+  </header>
+
+  <main class="wrap">
+    <section class="overview" id="overview" aria-label="Overview" hidden>
+      <div class="ov-ring" id="ov-ring"></div>
+      <ol class="ov-key" id="ov-key"></ol>
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <div class="toolbar">
+      <div class="seg-ctl" role="group" aria-label="Show">
+        <button type="button" id="view-active" aria-pressed="true">Active <span class="count" id="count-active"></span></button>
+        <button type="button" id="view-archive" aria-pressed="false">Archive <span class="count" id="count-archive"></span></button>
+      </div>
+      <input type="search" id="search" placeholder="Search tasks  /" aria-label="Search tasks" autocomplete="off">
+      <select id="tag-sel" aria-label="Filter by tag"><option value="">All tags</option></select>
+      <span class="spacer"></span>
+      <label for="sort-sel" class="inline">Sort
+        <select id="sort-sel">
+          <option value="due">Due date</option>
+          <option value="priority">Priority</option>
+          <option value="pct">% complete</option>
+        </select>
+      </label>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <section class="panel empty" id="empty" hidden>
+      <h2>No tasks yet</h2>
+      <p>Each task becomes a set of rings: one per phase of its checklist, plus an outer ring that counts the days to its due date.</p>
+      <div class="row">
+        <button type="button" class="btn primary" id="empty-new">Create a task</button>
+        <button type="button" class="btn" id="load-examples">Load the 6 example tasks</button>
+      </div>
+      <p class="hint">Examples are tagged “example”. Delete them whenever you like.</p>
+    </section>
+    <p class="muted no-match" id="no-match" hidden></p>
+
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="scrim" id="scrim" hidden></div>
+
+<section class="dialog" id="focus" role="dialog" aria-modal="true" aria-labelledby="focus-title" hidden>
+  <div class="dialog-head">
+    <span class="chip" id="focus-kind"></span>
+    <button type="button" class="btn" id="focus-close">Close</button>
+  </div>
+  <div class="task-view" id="focus-view">
+    <div class="focus-ring" id="focus-ring"></div>
+    <div class="focus-head">
+      <h2 id="focus-title"></h2>
+      <div id="focus-meta"></div>
+    </div>
+    <div class="notes" id="focus-notes"></div>
+    <div><p class="sec-h">Checklist</p><div id="focus-list"></div></div>
+    <div id="focus-cycles-wrap" hidden><p class="sec-h">Past cycles</p><ul class="cycles" id="focus-cycles"></ul></div>
+    <div><p class="sec-h">History</p><ul class="history" id="focus-history"></ul></div>
+  </div>
+  <div class="confirm" id="focus-confirm" hidden>
+    <span>Delete this task and its history? This can’t be undone.</span>
+    <button type="button" class="btn danger" id="focus-confirm-yes">Delete task</button>
+    <button type="button" class="btn" id="focus-confirm-no">Keep it</button>
+  </div>
+  <div class="dialog-foot">
+    <button type="button" class="btn primary" id="focus-edit">Edit</button>
+    <button type="button" class="btn" id="focus-archive">Archive</button>
+    <button type="button" class="btn" id="focus-template">Save as template</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn danger-text" id="focus-delete">Delete…</button>
+  </div>
+</section>
+
+<section class="dialog" id="editor" role="dialog" aria-modal="true" aria-labelledby="editor-title" hidden>
+  <form id="editor-form" autocomplete="off" novalidate>
+    <h2 id="editor-title">New task</h2>
+    <div class="field">
+      <label for="ed-title" id="ed-title-label">Title</label>
+      <input id="ed-title" maxlength="200">
+    </div>
+    <div class="cols task-only">
+      <div class="field"><label for="ed-priority">Priority</label>
+        <select id="ed-priority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+      <div class="field"><label for="ed-start">Start date</label><input id="ed-start" type="date"></div>
+      <div class="field"><label for="ed-due">Due date</label><input id="ed-due" type="date"></div>
+    </div>
+    <div class="field task-only">
+      <label for="ed-tags">Tags</label>
+      <input id="ed-tags" maxlength="400" placeholder="client-a, q4, audit" list="tag-list">
+      <datalist id="tag-list"></datalist>
+      <p class="hint">Separate tags with commas.</p>
+    </div>
+    <div class="field task-only">
+      <label for="ed-notes">Notes</label>
+      <textarea id="ed-notes" rows="4" maxlength="20000"></textarea>
+      <p class="hint">Markdown: **bold**, *italic*, `code`, - bullets, 1. numbered, # headings.</p>
+    </div>
+    <div class="field task-only">
+      <label for="ed-repeat">Repeat</label>
+      <div class="repeat-row">
+        <select id="ed-repeat">
+          <option value="">Does not repeat</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly on…</option>
+          <option value="monthly">Monthly on…</option>
+          <option value="interval">Every N days</option>
+        </select>
+        <fieldset class="weekdays" id="ed-rep-weekly" hidden>
+          <legend class="sr">Weekdays</legend>
+          <label><input type="checkbox" value="0">Mon</label><label><input type="checkbox" value="1">Tue</label>
+          <label><input type="checkbox" value="2">Wed</label><label><input type="checkbox" value="3">Thu</label>
+          <label><input type="checkbox" value="4">Fri</label><label><input type="checkbox" value="5">Sat</label>
+          <label><input type="checkbox" value="6">Sun</label>
+        </fieldset>
+        <select id="ed-month-day" aria-label="Day of the month" hidden></select>
+        <span id="ed-rep-interval" class="inline" hidden>every <input id="ed-every" type="number" min="1" max="365" value="7" aria-label="Number of days"> days</span>
+      </div>
+      <p class="hint" id="ed-repeat-hint" hidden>Each cycle runs from the start date to the due date. When every item is done, or the due date passes, the finished cycle is saved under Past cycles and the checklist resets for the next one.</p>
+    </div>
+    <div class="phases-head">
+      <span class="sec-h">Checklist phases</span>
+      <span class="hint">Phase 1 is the outer ring. Up to 4 phases. Drag ⠿ to reorder or to move items between phases; Alt+↑/↓ does the same from the keyboard. Enter adds the next item.</span>
+    </div>
+    <div id="ed-phases"></div>
+    <button type="button" class="btn" id="ed-add-phase">Add phase</button>
+    <p class="err" id="ed-err" role="alert" hidden></p>
+    <div class="confirm" id="ed-confirm" hidden>
+      <span>Delete this task and its history? This can’t be undone.</span>
+      <button type="button" class="btn danger" id="ed-confirm-yes">Delete task</button>
+      <button type="button" class="btn" id="ed-confirm-no">Keep it</button>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" class="btn danger-text" id="ed-delete">Delete…</button>
+      <button type="button" class="btn" id="ed-as-template">Save as template</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="ed-cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="ed-save">Save task</button>
+    </div>
+  </form>
+</section>
+
+<section class="dialog" id="templates" role="dialog" aria-modal="true" aria-labelledby="templates-title" hidden>
+  <div class="dialog-head"><h2 id="templates-title">Templates</h2><button type="button" class="btn" id="templates-close">Close</button></div>
+  <p class="muted">Reusable checklists. A template keeps phases and item text only; dates, notes and statuses start fresh.</p>
+  <ul class="tpl-list" id="tpl-list"></ul>
+  <p class="muted" id="tpl-empty" hidden>No templates yet. Open any task and choose <b>Save as template</b>, or create one here.</p>
+  <div class="row"><button type="button" class="btn primary" id="tpl-create">Create a template</button></div>
+</section>
+
+<section class="dialog" id="settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+  <div class="dialog-head"><h2 id="settings-title">Settings</h2><button type="button" class="btn" id="settings-close">Close</button></div>
+  <form id="prefs-form" class="stack" autocomplete="off" novalidate>
+    <p class="sec-h">Preferences</p>
+    <div class="cols two">
+      <div class="field"><label for="set-autolock">Auto-lock after (minutes)</label>
+        <input id="set-autolock" type="number" min="1" max="120" step="1"></div>
+      <div class="field"><label for="set-theme">Theme</label>
+        <select id="set-theme"><option value="system">Match system</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+    </div>
+    <p class="err" id="prefs-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit">Save preferences</button>
+  </form>
+  <p class="sec-h">Keyboard shortcuts</p>
+  <dl class="facts keys">
+    <dt><kbd>N</kbd></dt><dd>New task</dd>
+    <dt><kbd>/</kbd></dt><dd>Search</dd>
+    <dt><kbd>L</kbd></dt><dd>Lock now</dd>
+    <dt><kbd>Esc</kbd></dt><dd>Close a panel or menu</dd>
+    <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move between checklist items</dd>
+    <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Set Pending, Underway, Done, Blocked, Deferred</dd>
+    <dt><kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd></dt><dd>Move an item or phase in the task editor</dd>
+  </dl>
+  <p class="sec-h">Vault</p>
+  <dl class="facts" id="vault-info"></dl>
+  <p class="sec-h">Backup</p>
+  <p class="muted">A backup is a copy of the encrypted vault. It opens only with the passphrase that was current when you made it.</p>
+  <div class="row"><button type="button" class="btn" id="backup-export">Export encrypted backup</button></div>
+  <form id="import-form" class="stack" autocomplete="off" novalidate>
+    <label for="import-file">Restore from a backup file</label>
+    <input id="import-file" type="file" accept=".htv,application/octet-stream">
+    <label for="import-pass">That backup’s passphrase</label>
+    <input id="import-pass" type="password" autocomplete="off">
+    <p class="err" id="import-err" role="alert" hidden></p>
+    <div class="confirm" id="import-confirm" hidden>
+      <span>Replace everything in this vault with the backup? The current vault is kept as a saved version.</span>
+      <button type="submit" class="btn danger">Replace with backup</button>
+      <button type="button" class="btn" id="import-cancel">Cancel</button>
+    </div>
+    <button type="button" class="btn" id="import-start">Restore…</button>
+  </form>
+  <p class="sec-h">Change passphrase</p>
+  <form id="chpass-form" class="stack" autocomplete="off" novalidate>
+    <label for="chpass-cur">Current passphrase</label>
+    <input id="chpass-cur" type="password" autocomplete="current-password">
+    <label for="chpass-new">New passphrase</label>
+    <input id="chpass-new" type="password" autocomplete="new-password">
+    <label for="chpass-new2">Type it again</label>
+    <input id="chpass-new2" type="password" autocomplete="new-password">
+    <p class="err" id="chpass-err" role="alert" hidden></p>
+    <button class="btn primary" type="submit">Change passphrase</button>
+  </form>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

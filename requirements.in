@@ -1,0 +1,7 @@
+# Direct dependencies. Pinned with hashes in requirements.lock (pip-compile --generate-hashes).
+flask
+waitress
+cryptography
+argon2-cffi
+# click needs colorama on Windows; listed so the lock covers both platforms.
+colorama
