@@ -3,7 +3,17 @@
 Local, encrypted task dashboard. Each task is a set of concentric rings: one per checklist phase,
 plus an outer day-cycle ring from start date to due date. Runs only on `127.0.0.1:8796`.
 
-Spec: https://claude.ai/artifact/2uE9NJDgKrFFhNrnv5jeiF · Version 1.0.0
+Version 1.0.0 · MIT license · single user · Linux and Windows
+
+## Download
+
+- **Windows:** download `HaphazardTasks-windows-x64-1.0.0.zip` from
+  [Releases](https://github.com/HaphazardLabs/HaphazardTasks/releases), unzip it under your user profile and
+  double-click `Start HaphazardTasks.bat`. No installer or admin rights. Check the zip's SHA-256 against the
+  one in the release notes.
+- **Linux:** clone the repo and run `./install.sh` (needs Python 3.11+).
+- **Asking IT first?** [docs/IT-REVIEW.md](docs/IT-REVIEW.md) is a one-page summary of what it installs,
+  what it touches on the network, how data is protected and how to remove it.
 
 ## Status
 
@@ -17,10 +27,10 @@ Spec: https://claude.ai/artifact/2uE9NJDgKrFFhNrnv5jeiF · Version 1.0.0
 
 ## Install and run
 
-**Linux (this laptop):** `./install.sh` once (creates `.venv` from `requirements.lock`, adds the desktop
+**Linux:** `./install.sh` once (creates `.venv` from `requirements.lock`, adds the desktop
 icon), then the **HaphazardTasks** icon or `./launch.sh`. `HT_NO_DESKTOP=1 ./install.sh` skips the icon.
 
-**Windows (work computer):** `python packaging/build_windows.py` builds
+**Windows:** use the release zip, or build it yourself: `python packaging/build_windows.py` builds
 `dist/HaphazardTasks-windows-x64-1.0.0.zip`. Unzip it under your profile and double-click
 `Start HaphazardTasks.bat`. No installer, no admin rights. See `packaging/windows/README-WINDOWS.txt`.
 
@@ -35,7 +45,7 @@ itself 30 minutes after the vault locks.
 | Previous versions | `vault.htv.1` … `.5` (encrypted) | same |
 | Log (paths and status codes only) | `server.log` beside the vault | same |
 
-The two machines keep separate vaults. To move data, use Settings → Export encrypted backup on one
+Each computer keeps its own separate vault. To move data, use Settings → Export encrypted backup on one
 and Restore from a backup file on the other (same file format on both). `HAPHAZARDTASKS_DATA`
 overrides the folder (used for testing).
 
@@ -97,3 +107,10 @@ packaging/            build_windows.py, windows/ (launcher .bat, shortcut helper
 requirements.in/.lock dependencies; regenerate the lock with pip-compile --generate-hashes
 tests/
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). Bundled fonts: SIL Open Font License 1.1.
+
+No warranty. HaphazardTasks has automated tests but no independent security audit. Don't use it for
+regulated or classified data unless your organisation approves it.
